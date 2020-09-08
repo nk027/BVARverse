@@ -1,29 +1,48 @@
 
-#' Quick BVAR plots using ggplot2
+#' Quick ggplot2 plots for Bayesian VARs
 #'
+#' Function to quickly plot outputs from \code{bvar} and derived objects.
+#' Supported plots include traces and densities, forecasts, and impulse
+#' response functions. For more flexible plots one may use the outputs of
+#' \code{\link{tidy.bvar}} and \code{\link{augment.bvar}}.
 #'
+#' @inheritParams tidy.bvar
+#' @param type A string with the type (trace or density) of plot desired.
 #'
-#' @param x
-#' @param type
-#' @param vars
-#' @param vars_response,vars_impulse
-#' @param chains
-#' @param t_back
-#' @param ... Not used.
+#' @return Returns a \code{ggplot} object with a basic structure.
 #'
-#' @return Returns a \code{ggplot} object.
+#' @import BVAR
+#' @importFrom rlang .data
+#' @importFrom ggplot2 ggplot aes labs theme_bw geom_line geom_density
+#' @importFrom ggplot2 geom_hline facet_wrap scale_x_continuous
 #'
 #' @export
+#'
+#' @examples
+#' # Access a subset of the fred_qd dataset
+#' data <- fred_qd[, c("CPIAUCSL", "UNRATE", "FEDFUNDS")]
+#' # Transform it to be stationary
+#' data <- fred_transform(data, codes = c(5, 5, 1), lag = 4)
+#'
+#' # Estimate a BVAR using one lag, default settings and very few draws
+#' x <- bvar(data, lags = 1, n_draw = 1000L, n_burn = 200L, verbose = FALSE)
+#'
+#' # Plot the outputs - alternatively use ggplot() with fortify()
+#' bv_ggplot(x)
+#' bv_ggplot(irf(x))
+#' bv_ggplot(predict(x))
 bv_ggplot <- function(x, ...) {UseMethod("bv_ggplot", x)}
 
 
 #' @rdname bv_ggplot
+#' @export
 bv_ggplot.default <- function(x, ...) {
   stop("No methods for class ", paste0(class(x), collapse = " / "), " found.")
 }
 
 
 #' @rdname bv_ggplot
+#' @export
 bv_ggplot.bvar <- function(x,
   type = c("trace", "density"),
   vars = NULL, vars_response = NULL, vars_impulse = NULL,
@@ -40,34 +59,36 @@ bv_ggplot.bvar <- function(x,
 
   type <- match.arg(type)
 
-  df <- fortify.bvar(x,
+  df <- tidy.bvar(x,
     vars = vars, vars_response = vars_response, vars_impulse = vars_impulse,
     chains = chains)
 
   # Trace or density plot
   if(type == "trace") {
-    p <- ggplot(df, aes(x = draw)) +
+    p <- ggplot(df, aes(x = .data$draw)) +
       labs(x = NULL, y = NULL, color = "MCMC chain") +
       theme_bw()
 
-    p <- p + facet_wrap(. ~ variable, scales = "free")
+    p <- p + facet_wrap(. ~ .data$variable, scales = "free")
 
     if(length(chains) == 0) {
-      p <- p + geom_line(aes(y = value))
+      p <- p + geom_line(aes(y = .data$value))
     } else {
-      p <- p + geom_line(aes(y = value, color = chain), alpha = 0.5)
+      p <- p +
+        geom_line(aes(y = .data$value, color = .data$chain), alpha = 0.5)
     }
 
   } else if(type == "density") {
-    p <- ggplot(df, aes(x = value)) +
+    p <- ggplot(df, aes(x = .data$value)) +
       labs(x = NULL, y = NULL, fill = "MCMC chain", color = "MCMC chain") +
       theme_bw() +
-      facet_wrap(. ~ variable, scales = "free")
+      facet_wrap(. ~ .data$variable, scales = "free")
 
     if(length(chains) == 0) {
       p <- p + geom_density(fill = "grey", alpha = 0.5)
     } else {
-      p <- p + geom_density(aes(color = chain, fill = chain), alpha = 0.5)
+      p <- p +
+        geom_density(aes(color = .data$chain, fill = .data$chain), alpha = 0.5)
     }
   }
 
@@ -78,13 +99,14 @@ bv_ggplot.bvar <- function(x,
 
 
 #' @rdname bv_ggplot
+#' @export
 bv_ggplot.bvar_irf <- function(x,
   vars_response = NULL,
   vars_impulse = NULL,
   # col = "#737373",
   ...) {
 
-  df <- fortify.bvar_irf(x)
+  df <- tidy.bvar_irf(x)
 
   P <- length(unique(df[["quantile"]]))
   variables <- x[["variables"]]
@@ -100,17 +122,17 @@ bv_ggplot.bvar_irf <- function(x,
   df[["impulse"]] <- factor(paste(df[["impulse"]], "shock"))
   df[["response"]] <- factor(paste(df[["response"]], "response"))
 
-  p <- ggplot(df, aes(x = time - 1)) +
+  p <- ggplot(df, aes(x = .data$time - 1)) +
     scale_x_continuous(breaks = function(x) {
       unique(floor(pretty(seq(0, (max(x)) * 1.1))))
     }) +
     labs(x = NULL, y = NULL) +
     theme_bw()
 
-  p <- p + facet_wrap(response ~ impulse, scales = "free_y")
+  p <- p + facet_wrap(.data$response ~ .data$impulse, scales = "free_y")
 
   # col <- fill_ci_col(x = "#000000", y = col, P = P)
-  p <- p + geom_line(aes(y = value, col = quantile)) +
+  p <- p + geom_line(aes(y = .data$value, col = .data$quantile)) +
     # scale_colour_manual(values = col) +
     geom_hline(yintercept = 0, colour = "darkgray", lty = 2)
 
@@ -121,13 +143,14 @@ bv_ggplot.bvar_irf <- function(x,
 
 
 #' @rdname bv_ggplot
+#' @export
 bv_ggplot.bvar_fcast <- function(x,
   vars = NULL,
   # col = "#737373",
   t_back = 1L,
   ...) {
 
-  df <- fortify.bvar_fcast(x, t_back)
+  df <- tidy.bvar_fcast(x, t_back)
 
   P <- length(unique(df[["quantile"]]))
   variables <- x[["variables"]]
@@ -140,17 +163,18 @@ bv_ggplot.bvar_fcast <- function(x,
 
   df[["variable"]] <- factor(paste(df[["variable"]], "prediction"))
 
-  p <- ggplot(df, aes(x = time)) +
+  p <- ggplot(df, aes(x = .data$time)) +
     scale_x_continuous(breaks = function(x) {
       unique(floor(pretty(seq((-t_back + 1), (max(x)) * 1.1))))
     }) +
     labs(x = NULL, y = NULL) +
     theme_bw()
 
-  p <- p + facet_wrap(. ~ variable, scales = "free_y")
+  p <- p + facet_wrap(. ~ .data$variable, scales = "free_y")
 
   # col <- fill_ci_col(x = "#000000", y = col, P = P)
-  p <- p + geom_line(aes(y = value, col = quantile), na.rm = TRUE) +
+  p <- p +
+    geom_line(aes(y = .data$value, col = .data$quantile), na.rm = TRUE) +
     # scale_colour_manual(values = col) +
     geom_hline(yintercept = 0, colour = "darkgray", lty = 2)
 
