@@ -8,7 +8,10 @@ Authors@R: c(person("Lukas", "Vashold", role = c("aut", "cre"), email = "lukas.v
 Author: Lukas Vashold [aut, cre] (<https://orcid.org/0000-0002-3562-3414>),
     Nikolas Kuschnig [aut] (<https://orcid.org/0000-0002-6642-2543>)
 Maintainer: Lukas Vashold <lukas.vashold@wu.ac.at>
-Description: Functions to prepare and visualise tidy object from BVAR.
+Description: Functions to prepare tidy objects from esimated models via BVAR and
+    visualisation thereof. Bridges the gap between estimating models with BVAR
+    and plotting the results in a more sophisticated way with ggplot2 as well as
+    passing them on in a tidy format. 
 URL: https://github.com/nk027/bvarverse
 BugReports: https://github.com/nk027/bvarverse/issues
 Depends: R (>= 3.5.0), BVAR

@@ -3,6 +3,7 @@
 \name{bv_ggplot}
 \alias{bv_ggplot}
 \alias{bv_ggplot.default}
+\alias{bv_ggplot.bvar_chains}
 \alias{bv_ggplot.bvar}
 \alias{bv_ggplot.bvar_irf}
 \alias{bv_ggplot.bvar_fcast}
@@ -12,19 +13,22 @@ bv_ggplot(x, ...)
 
 \method{bv_ggplot}{default}(x, ...)
 
+\method{bv_ggplot}{bvar_chains}(x, ...)
+
 \method{bv_ggplot}{bvar}(
   x,
   type = c("trace", "density"),
   vars = NULL,
   vars_response = NULL,
   vars_impulse = NULL,
+  orientation = c("horizontal", "vertical"),
   chains = list(),
   ...
 )
 
-\method{bv_ggplot}{bvar_irf}(x, vars_response = NULL, vars_impulse = NULL, ...)
+\method{bv_ggplot}{bvar_irf}(x, vars_response = NULL, vars_impulse = NULL, col = "#737373", ...)
 
-\method{bv_ggplot}{bvar_fcast}(x, vars = NULL, t_back = 1L, ...)
+\method{bv_ggplot}{bvar_fcast}(x, vars = NULL, col = "#737373", t_back = 1L, ...)
 }
 \arguments{
 \item{x}{A \code{bvar} or derived object to turn into a dataframe.}
@@ -52,8 +56,16 @@ to select coefficents. Dependent variables are specified with
 \code{NULL}, indicating that no coefficients will be processed.
 draws.}
 
+\item{orientation}{A string indicating the desired orientation of trace or
+density plots}
+
 \item{chains}{List of \code{bvar} objects. Contents of multiple runs are
 added to the output, in order to help in assessing covergence.}
+
+\item{col}{Character vector. Colour(s) of the lines delineating credible
+intervals. Single values will be recycled if necessary. Recycled HEX color
+codes are varied in transparency if not provided (e.g. "#737373FF"). Lines
+can be bypassed by setting this to \code{"transparent"}.}
 
 \item{t_back}{Integer scalar. Whether to include actual datapoints in the
 tidied forecast.}

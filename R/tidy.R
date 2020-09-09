@@ -206,3 +206,4 @@ tidy.bvar_irf <- function(x, ...) {
 
   return(as_tibble(out))
 }
+

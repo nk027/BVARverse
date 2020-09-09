@@ -1,4 +1,3 @@
-
 #' Quick ggplot2 plots for Bayesian VARs
 #'
 #' Function to quickly plot outputs from \code{bvar} and derived objects.
@@ -8,6 +7,12 @@
 #'
 #' @inheritParams tidy.bvar
 #' @param type A string with the type (trace or density) of plot desired.
+#' @param orientation A string indicating the desired orientation of trace or
+#' density plots
+#' @param col Character vector. Colour(s) of the lines delineating credible
+#' intervals. Single values will be recycled if necessary. Recycled HEX color
+#' codes are varied in transparency if not provided (e.g. "#737373FF"). Lines
+#' can be bypassed by setting this to \code{"transparent"}.
 #'
 #' @return Returns a \code{ggplot} object with a basic structure.
 #'
@@ -15,6 +20,7 @@
 #' @importFrom rlang .data
 #' @importFrom ggplot2 ggplot aes labs theme_bw geom_line geom_density
 #' @importFrom ggplot2 geom_hline facet_wrap scale_x_continuous
+#' @importFrom ggplot2 scale_color_manual
 #'
 #' @export
 #'
@@ -43,9 +49,17 @@ bv_ggplot.default <- function(x, ...) {
 
 #' @rdname bv_ggplot
 #' @export
+bv_ggplot.bvar_chains <- function(x, ...) {
+  bv_ggplot.bvar(x, ...)
+}
+
+
+#' @rdname bv_ggplot
+#' @export
 bv_ggplot.bvar <- function(x,
   type = c("trace", "density"),
   vars = NULL, vars_response = NULL, vars_impulse = NULL,
+  orientation = c("horizontal", "vertical"),
   chains = list(),
   ...) {
 
@@ -58,6 +72,7 @@ bv_ggplot.bvar <- function(x,
   }
 
   type <- match.arg(type)
+  orientation <- match.arg(orientation)
 
   df <- tidy.bvar(x,
     vars = vars, vars_response = vars_response, vars_impulse = vars_impulse,
@@ -69,7 +84,9 @@ bv_ggplot.bvar <- function(x,
       labs(x = NULL, y = NULL, color = "MCMC chain") +
       theme_bw()
 
-    p <- p + facet_wrap(. ~ .data$variable, scales = "free")
+    p <- p + facet_wrap(. ~ .data$variable, scales = "free",
+                        nrow = ifelse(orientation == "horizontal", 1, 
+                                      length(unique(df[["variable"]]))))
 
     if(length(chains) == 0) {
       p <- p + geom_line(aes(y = .data$value))
@@ -91,7 +108,7 @@ bv_ggplot.bvar <- function(x,
         geom_density(aes(color = .data$chain, fill = .data$chain), alpha = 0.5)
     }
   }
-
+  
   # To-do: Add information about quantiles to the plot
 
   return(p)
@@ -103,7 +120,7 @@ bv_ggplot.bvar <- function(x,
 bv_ggplot.bvar_irf <- function(x,
   vars_response = NULL,
   vars_impulse = NULL,
-  # col = "#737373",
+  col = "#737373",
   ...) {
 
   df <- tidy.bvar_irf(x)
@@ -131,9 +148,10 @@ bv_ggplot.bvar_irf <- function(x,
 
   p <- p + facet_wrap(.data$response ~ .data$impulse, scales = "free_y")
 
-  # col <- fill_ci_col(x = "#000000", y = col, P = P)
+  col <- fill_ci_col(x = "#000000", y = col, P = P)
   p <- p + geom_line(aes(y = .data$value, col = .data$quantile)) +
-    # scale_colour_manual(values = col) +
+    scale_color_manual(values = col, 
+                        breaks = as.character(unique(df$quantile))) +
     geom_hline(yintercept = 0, colour = "darkgray", lty = 2)
 
   # To-do: Allow ribbons
@@ -146,7 +164,7 @@ bv_ggplot.bvar_irf <- function(x,
 #' @export
 bv_ggplot.bvar_fcast <- function(x,
   vars = NULL,
-  # col = "#737373",
+  col = "#737373",
   t_back = 1L,
   ...) {
 
@@ -172,10 +190,11 @@ bv_ggplot.bvar_fcast <- function(x,
 
   p <- p + facet_wrap(. ~ .data$variable, scales = "free_y")
 
-  # col <- fill_ci_col(x = "#000000", y = col, P = P)
+  col <- fill_ci_col(x = "#000000", y = col, P = P)
   p <- p +
     geom_line(aes(y = .data$value, col = .data$quantile), na.rm = TRUE) +
-    # scale_colour_manual(values = col) +
+    scale_color_manual(values = col, 
+                        breaks = as.character(unique(df$quantile))) +
     geom_hline(yintercept = 0, colour = "darkgray", lty = 2)
 
   # To-do: Allow ribbons
